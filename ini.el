@@ -22,7 +22,6 @@
 
 (defun ini-decode (ini-text)
   "Convert INI-TEXT into a lisp alist object."
-  ;; text -> alist
   (if (not (stringp ini-text))
       (error "Must be a string"))
   (let ((lines (split-string ini-text "\n"))
