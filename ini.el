@@ -20,12 +20,12 @@
 ;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
 ;; Boston, MA 02110-1301, USA.
 
-(defun ini-decode (ini_text)
+(defun ini-decode (ini-text)
+  "Convert INI-TEXT into a lisp alist object."
   ;; text -> alist
-  (interactive)
-  (if (not (stringp ini_text))
+  (if (not (stringp ini-text))
       (error "Must be a string"))
-  (let ((lines (split-string ini_text "\n"))
+  (let ((lines (split-string ini-text "\n"))
 	(section)
 	(section-list)
 	(alist))
@@ -42,12 +42,12 @@
 		(setq alist section-list))
 	      (setq section (match-string 1 line))
 	      (setq section-list nil)))
-	      ;; catch properties
-	      (if (string-match "^\\([^\s\t]+\\)[\s\t]*=[\s\t]*\\(.+\\)$" line)
-		  (let ((property (match-string 1 line))
-			(value (match-string 2 line)))
-		    (progn
-		      (setq section-list (cons `(,property . ,value) section-list)))))))
+        ;; catch properties
+	(if (string-match "^\\([^\s\t]+\\)[\s\t]*=[\s\t]*\\(.+\\)$" line)
+	    (let ((property (match-string 1 line))
+		  (value (match-string 2 line)))
+	      (progn
+		(setq section-list (cons `(,property . ,value) section-list)))))))
     (if section
 	;; add as sub-list
 	(setq alist (cons `(,section . ,section-list) alist))
@@ -55,13 +55,12 @@
     alist))
 
 
-(defun ini-encode (ini_alist)
-  ;; alist -> text
-  (interactive)
-  (if (not (listp ini_alist))
-      (error "ini_alist is not a list"))
+(defun ini-encode (ini-alist)
+  "Convert a INI-ALIST into .INI formatted text."
+  (if (not (listp ini-alist))
+      (error "ini-alist is not a list"))
   (let ((txt ""))
-    (dolist (element ini_alist)
+    (dolist (element ini-alist)
       (let ((key (car element))
 	    (value (cdr element)))
 	(when (not (stringp key))
