@@ -40,18 +40,18 @@ unless something else is specified in the COMMENT-REGEXP."
 	(when (string-match "^\\[\\(.*\\)\\]$" line)
           (if section
               ;; add as sub-list
-              (setq alist (cons `(,section . ,section-list) alist))
+              (setq alist (cons `(,section . ,(reverse section-list)) alist))
             (setq alist section-list))
           (setq section (match-string 1 line))
           (setq section-list nil))
         ;; catch properties
-	(if (string-match "^\\([^\s\t]+\\)[\s\t]*=[\s\t]*\\(.+\\)$" line)
+	(if (string-match "^\\([^\s\t]+\\)[\s\t]*[=:][\s\t]*\\(.+\\)$" line)
 	    (let ((property (match-string 1 line))
 		  (value (match-string 2 line)))
 	      (setq section-list (cons `(,property . ,value) section-list))))))
     (if section
 	;; add as sub-list
-	(setq alist (cons `(,section . ,section-list) alist))
+	(setq alist (cons `(,section . ,(reverse section-list)) alist))
       (setq alist section-list))
     (reverse alist)))
 
