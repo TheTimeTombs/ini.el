@@ -28,11 +28,33 @@ Emacs Lisp.
 
 (setq text (ini-encode alist))
 
-;; To write to an ini file
+;; To write to an ini file:
 
-(with-temp-buffer
-    (insert (ini-encode alist))
-    (append-to-file (point-min) (point-max) "/path/to/other/file.ini"))
+(ini-store alist "/path/to/other/file.ini")
+
+;; To write the data structure to a file
+;; with extra comment written at the top of that file:
+
+(ini-store alist
+           "/path/to/other/file.ini"
+           "; File Description: a .INI file example\n")
+
+The above creates the file if it does not exists, otherwise
+it appends the new text to it.
+
+(ini-store alist2
+           "/path/to/other/file.ini"
+           "\n; More data:\n")
+
+
+To overwrite text inside an existing file, set the OVERWRITE
+optional argument to non-nil like this:
+
+
+(ini-store alist
+           "/path/to/other/file.ini"
+           "Data re-written:\n"
+           :overwrite)
 
 ```
 

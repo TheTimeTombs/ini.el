@@ -44,6 +44,8 @@
 ;;       is named after the file base name.
 ;;  - `ini-encode':
 ;;    - Supports the more complex data structure with list values.
+;;  - `ini-store': a new function that stores the data structure directly into
+;;     a file with append and overwrite capability.
 
 ;; The code hierarchy follows:
 ;;
@@ -52,7 +54,8 @@
 ;;     - `ini--add-to-keys'
 ;;   - `ini--add-extra-value'
 ;;
-;; - `ini-encode'
+;; - `ini-store'
+;;   - `ini-encode'
 
 ;;; --------------------------------------------------------------------------
 ;;; Code:
@@ -207,6 +210,36 @@ Put KEYS in order, each one with one or several VALUES."
                 (push (format "%s%s" spacer val) lines)))
           (push (format "\n%s = %s" key value) lines))))
     (format "%s\n" (string-join (reverse lines) "\n"))))
+
+;; --
+
+(defun ini-store (alist filename &optional header overwrite)
+  "Write the ALIST object into the FILENAME as .INI file format.
+
+If HEADER is specified it must be a string.  That string is
+inserted at the top of the file.  The HEADER can be anything and
+it is inserted verbatim.  If it is meant to be a comment then
+ensure you comment each line properly.
+
+By default the new text is appended to the file FILENAME; the
+file is created if it does not exists. However if the OVERWRITE
+argument is non-nil then a new file is created and an
+existing one is overwritten with the new content.
+
+If you need more file writing control you may want to use the
+`write-region' function explicitly instead.
+
+The function returns FILENAME."
+  (with-temp-buffer
+    (when header
+      (unless (stringp header)
+        (error "Invalid header: %S" header))
+      (insert header))
+    (insert (ini-encode alist))
+    (if overwrite
+        (write-region (point-min) (point-max) filename nil)
+      (append-to-file (point-min) (point-max) filename)))
+  filename)
 
 ;; ---------------------------------------------------------------------------
 (provide 'ini)
