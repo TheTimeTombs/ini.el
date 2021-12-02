@@ -1,6 +1,7 @@
 ;;; ini.el --- Converting between INI files and association lists
 
-;; Author: Daniel Ness <daniel.r.ness@gmail.com>
+;; Original author: Daniel Ness <daniel.r.ness@gmail.com>
+;; Author of new implementation: Pierre Rouleau <prouleau001@gmail.com>
 
 ;;; License
 ;;
@@ -20,60 +21,193 @@
 ;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
 ;; Boston, MA 02110-1301, USA.
 
-(defun ini-decode (ini-text &optional comment-regexp)
-  "Convert INI-TEXT into a lisp alist object.
+;;; --------------------------------------------------------------------------
+;;; Commentary:
+;;
+;; This converts .INI file format into an associated list and vice versa.
+;; - The original implementation was done by Daniel Ness.
+;; - Pierre Rouleau re-implemented the code, keeping the function names
+;;   but with  a different implementation and with an API change.
+;;   - `ini-decode':
+;;     - Simplified API: its argument is the name of the file,
+;;       instead of a string that is the content of the file.
+;;       - the new implementation does not create a list of line strings,
+;;         which could potentially be quite expensive; instead it uses a
+;;         larger regexp to search for syntactic element and a FSM logic to
+;;         process matched strings.  The regexp is more complex but described
+;;         in comments.
+;;     - Supports a wider syntax:
+;;       - Comments can now start with # or ;
+;;       - Supports multi-line values: values expressed in
+;;         multiple line express a compound value that is a list of strings.
+;;     - Supports files with key-value pairs without a section: the section
+;;       is named after the file base name.
+;;  - `ini-encode':
+;;    - Supports the more complex data structure with list values.
 
-By default treats a semicolon at the beginning of the line as a comment
-unless something else is specified in the COMMENT-REGEXP."
-  (if (not (stringp ini-text))
-      (error "Must be a string"))
-  (let ((lines (split-string ini-text "\n"))
-	(section)
-	(section-list)
-	(alist)
-        (cmt-regexp (or comment-regexp "^;")))
-    (dolist (line lines)
-      ;; skip comments
-      (unless (or (string-match cmt-regexp line)
-		  (string-match "^[ \t]*$" line))
-	;; catch sections
-	(when (string-match "^\\[\\(.*\\)\\]$" line)
-          (if section
-              ;; add as sub-list
-              (setq alist (cons `(,section . ,(reverse section-list)) alist))
-            (setq alist section-list))
-          (setq section (match-string 1 line))
-          (setq section-list nil))
-        ;; catch properties
-	(if (string-match "^\\([^\s\t]+\\)[\s\t]*[=:][\s\t]*\\(.+\\)$" line)
-	    (let ((property (match-string 1 line))
-		  (value (match-string 2 line)))
-	      (setq section-list (cons `(,property . ,value) section-list))))))
-    (if section
-	;; add as sub-list
-	(setq alist (cons `(,section . ,(reverse section-list)) alist))
-      (setq alist section-list))
-    (reverse alist)))
+;; The code hierarchy follows:
+;;
+;; - `ini-decode'
+;;   - `ini--add-to-alist'
+;;     - `ini--add-to-keys'
+;;   - `ini--add-extra-value'
+;;
+;; - `ini-encode'
+
+;;; --------------------------------------------------------------------------
+;;; Code:
+;;
+
+(defconst ini--regexp "\
+^\\(\
+\\([#;].*\\)\\|\
+\\(\\[\\(.*\\)\\]\\)\\|\
+\\(\\([[:alpha:]][^[:blank:]]+\\)[[:blank:]]+[:=][[:blank:]]*\\(.+\\)\\)\\|\
+\\([[:blank:]]+\\(.+\\)\\)\
+\\)$"
+  "Regular expression used to extract .INI syntactic elements.")
+
+;; Group number ------------------------------------------------------------>
+;; "^\(                                                                      : 1
+;;       \([#;].*\)                                                          : 2=comment
+;;    \| \(\[\(.*\)\]\)                                                      : 3, 4=section
+;;    \| \( \([[:alpha:]][^[:blank:]]+\)[[:blank:]]+[:=][[:blank:]]*\(.+\)\) : 5, 6=key, 7=value
+;;    \| \([[:blank:]]+\(.+\)\)                                              : 8, 9=extra-value
+;; \)$"
+
+
+(defconst ini--COMMENT     2 "group for comment.")
+(defconst ini--SECTION     4 "group for section.")
+(defconst ini--KEY         6 "group for key.")
+(defconst ini--VALUE       7 "group for value.")
+(defconst ini--EXTRA-VALUE 9 "group for extra value to append to value list.")
+
+(defun ini--add-extra-value (new-value values)
+  "Push NEW-VALUE to what is currently VALUES and return the resulting list.
+
+VALUES may be a single value or a list."
+  (unless (listp values)
+    (setq values (list values)))
+  (push new-value values))
+
+(defun ini--add-to-keys (keys key values)
+  "Push (KEY . VALUES) to KEYS and return KEYS list.
+
+KEYS is the previous list of key/values list.
+KEY  is the last detected key.
+VALUES is the currently accumulated value or values.
+
+The KEY/VALUES cons returned has VALUES in order."
+  (push (cons key
+              (if (listp values)
+                  (reverse values)
+                values))
+        keys))
+
+(defun ini--add-to-alist (alist section keys key values)
+  "Return ALIST with new SECTION entry pushed in front.
+Put KEYS in order, each one with one or several VALUES."
+  (when key
+    (setq keys (ini--add-to-keys keys key values)))
+  (when section
+    (push (cons section (reverse keys))
+          alist)))
+
+(defun ini-decode (filename)
+  "Read content of .INI formatted FILENAME and return corresponding alist."
+  (let ((state nil)                     ; states: nil, in-section, in-key
+        (alist nil)
+        section
+        (keys nil)
+        key
+        (values nil)
+        match)
+    (with-temp-buffer
+      (insert-file-contents filename)
+      (goto-char (point-min))
+      (while (re-search-forward ini--regexp nil :noerror)
+        (cond
+         ;; ----
+         ;; skip comment lines, allow comment lines in between value lines.
+         ((match-string ini--COMMENT)
+          nil)
+         ;; ----
+         ;; [section]
+         ((setq match (match-string ini--SECTION))
+          (setq alist (ini--add-to-alist alist section keys key values))
+          (setq section match
+                keys    nil
+                key     nil
+                values  nil
+                state  'in-section))
+         ;; ----
+         ;; key = value
+         ((setq match (match-string ini--KEY))
+          (cond
+           ((null state)
+            (setq section (file-name-base filename)
+                  key     match
+                  values (match-string ini--VALUE)
+                  state   'in-key))
+           ((eq state 'in-section)
+            (if key
+                (error
+                 (format
+                  "FSM: first key/value in section %s already has key %s"
+                  section key))
+              (setq key    match
+                    values (match-string ini--VALUE)
+                    state 'in-key)))
+           ((eq state 'in-key)
+            (setq keys   (ini--add-to-keys keys key values)
+                  key    match
+                  values (match-string ini--VALUE)
+                  state 'in-key))))
+         ;; ----
+         ;; extra value (on extra line), extending value to a list of values
+         ((setq match (match-string ini--EXTRA-VALUE))
+          (cond
+           ((null state)
+            (error
+             (format "Detect value %s without key and outside section"
+                     section)))
+           ((eq state 'in-section)
+            (error
+             (format "Detect value %s without key in section %s"
+                     match section)))
+           ((eq state 'in-key)
+            (setq values (ini--add-extra-value match values)))))))
+      (reverse (ini--add-to-alist alist section keys key values)))))
+
+;; --
 
 (defun ini-encode (ini-alist)
-  "Convert a INI-ALIST into .INI formatted text."
-  (if (not (listp ini-alist))
-      (error "ini-alist is not a list"))
-  (let ((txt ""))
-    (dolist (element ini-alist)
-      (let ((key (car element))
-	    (value (cdr element)))
-	(when (not (stringp key))
-	  (error "key is not a string"))
-	(if (listp value)
-	    (setq txt
-		  (concat txt
-			  (format "[%s]\n" key)
-			  (ini-encode value)))
-	  (setq txt
-		(concat txt (format "%s=%s\n" key value))))))
-    txt))
+  "Convert a INI-ALIST into .INI formatted string."
+  (unless (listp ini-alist)
+    (error "ini-alist is not a list"))
+  (let ((lines nil)
+        (key nil)
+        (value nil)
+        (separator "")
+        (spacer ""))
+    (dolist (section ini-alist)
+      (push (format "%s[%s]" separator (car section)) lines)
+      (setq separator "\n\n")
+      (dolist (key.value (cdr section))
+        (setq key (car key.value))
+        (unless (stringp key)
+          (error "In section %s: key %S is not a string!"
+                 section key))
+        (setq spacer (make-string (+ 3 (length key)) ?\s))
+        (setq value (cdr key.value))
+        (if (listp value)
+            (progn
+              (push (format "\n%s = %s" key (car value)) lines)
+              (dolist (val (cdr value))
+                (push (format "%s%s" spacer val) lines)))
+          (push (format "\n%s = %s" key value) lines))))
+    (format "%s\n" (string-join (reverse lines) "\n"))))
 
-
+;; ---------------------------------------------------------------------------
 (provide 'ini)
 ;;; ini.el ends here

@@ -1,33 +1,38 @@
 # ini.el
-**Author** Daniel Ness  
+**Original Author** Daniel Ness
+**Author of new implementation** Pierre Rouleau
+
 
 ### About
-This is a library with which to handle [INI](http://en.wikipedia.org/wiki/INI_file) style configuration files with 
-Emacs Lisp. It has been developed as part of a larger project that I am currently working on, as a simple form of
-configuration persistence.
+This is a simple file that handles [INI](http://en.wikipedia.org/wiki/INI_file) style configuration files with
+Emacs Lisp.
 
 ### Features
 * Conversion of INI-format to Elisp Association Lists
 * Conversion of an Association List to INI-format string
+* The value part of the key-value pair may contain a list
+  of values, each value being on a single line.
 
 ### Usage
 ```Lisp
-(require 'ini.el)
+(require 'ini)
 
-(let ((fname "/path/to/file.ini"))
 
-  ;; To parse an ini file
-  (setq txt
-    (with-temp-buffer
-      (insert-file-contents "/path/to/file.ini")
-      (buffer-string)))
-  (setq alist (ini-decode txt))
+;; To parse a .INI file and sore the resulting ELisp
+;; association list into the variable alist:
 
-  ;; To write to an ini file
-  (with-temp-buffer
-    (let ((txt (ini-encode alist)))
-      (insert txt)
-      (append-to-file (beginning-of-buffer) (end-of-buffer) "/path/to/other/file.ini"))))
+(setq alist (ini-encode "/path/to/file.ini"))
+
+;; To transform an association list to a string:
+
+(setq text (ini-encode alist))
+
+;; To write to an ini file
+
+(with-temp-buffer
+    (insert (ini-encode alist))
+    (append-to-file (point-min) (point-max) "/path/to/other/file.ini"))
+
 ```
 
 ### License
