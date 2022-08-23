@@ -3,6 +3,9 @@
 ;; Original author: Daniel Ness <daniel.r.ness@gmail.com>
 ;; Author of new implementation: Pierre Rouleau <prouleau001@gmail.com>
 ;; Author of melpa packaging: Esa Laine <pgdad@hotmail.com>
+;; Version: 1.0
+;; Package-Requires: ((emacs "24.4"))
+;; URL: https://github.com/EsaLaine/ini.el
 
 ;;; License
 ;;
