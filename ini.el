@@ -2,6 +2,7 @@
 
 ;; Original author: Daniel Ness <daniel.r.ness@gmail.com>
 ;; Author of new implementation: Pierre Rouleau <prouleau001@gmail.com>
+;; Author of melpa packaging: Esa Laine <pgdad@hotmail.com>
 
 ;;; License
 ;;
