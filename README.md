@@ -3,6 +3,7 @@
 
 **Author of new implementation** Pierre Rouleau
 
+**Author of melapa packaging** Esa Laine
 
 ### About
 This is a simple file that handles [INI](http://en.wikipedia.org/wiki/INI_file) style configuration files with
