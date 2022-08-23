@@ -90,11 +90,11 @@
 ;; \)$"
 
 
-(defconst ini--COMMENT     2 "group for comment.")
-(defconst ini--SECTION     4 "group for section.")
-(defconst ini--KEY         6 "group for key.")
-(defconst ini--VALUE       7 "group for value.")
-(defconst ini--EXTRA-VALUE 9 "group for extra value to append to value list.")
+(defconst ini--COMMENT     2 "Group for comment.")
+(defconst ini--SECTION     4 "Group for section.")
+(defconst ini--KEY         6 "Group for key.")
+(defconst ini--VALUE       7 "Group for value.")
+(defconst ini--EXTRA-VALUE 9 "Group for extra value to append to value list.")
 
 (defun ini--add-extra-value (new-value values)
   "Push NEW-VALUE to what is currently VALUES and return the resulting list.
@@ -120,7 +120,7 @@ The KEY/VALUES cons returned has VALUES in order."
 
 (defun ini--add-to-alist (alist section keys key values)
   "Return ALIST with new SECTION entry pushed in front.
-Put KEYS in order, each one with one or several VALUES."
+Put KEYS in order, each one with one or several VALUES for new KEY."
   (when key
     (setq keys (ini--add-to-keys keys key values)))
   (when section
@@ -198,7 +198,7 @@ Put KEYS in order, each one with one or several VALUES."
 (defun ini-encode (ini-alist)
   "Convert a INI-ALIST into .INI formatted string."
   (unless (listp ini-alist)
-    (error "ini-alist is not a list"))
+    (error "Ini-alist is not a list"))
   (let ((lines nil)
         (key nil)
         (value nil)
@@ -233,7 +233,7 @@ it is inserted verbatim.  If it is meant to be a comment then
 ensure you comment each line properly.
 
 By default the new text is appended to the file FILENAME; the
-file is created if it does not exists. However if the OVERWRITE
+file is created if it does not exists.  However if the OVERWRITE
 argument is non-nil then a new file is created and an
 existing one is overwritten with the new content.
 
