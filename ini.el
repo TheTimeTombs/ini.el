@@ -76,7 +76,7 @@
 ^\\(\
 \\([#;].*\\)\\|\
 \\(\\[\\(.*\\)\\]\\)\\|\
-\\(\\([[:alpha:]][^[:blank:]]+\\)[[:blank:]]+[:=][[:blank:]]*\\(.+\\)\\)\\|\
+\\(\\([[:alpha:]][^[:blank:]]+\\)[[:blank:]]*[:=][[:blank:]]*\\(.+\\)\\)\\|\
 \\([[:blank:]]+\\(.+\\)\\)\
 \\)$"
   "Regular expression used to extract .INI syntactic elements.")
@@ -85,7 +85,7 @@
 ;; "^\(                                                                      : 1
 ;;       \([#;].*\)                                                          : 2=comment
 ;;    \| \(\[\(.*\)\]\)                                                      : 3, 4=section
-;;    \| \( \([[:alpha:]][^[:blank:]]+\)[[:blank:]]+[:=][[:blank:]]*\(.+\)\) : 5, 6=key, 7=value
+;;    \| \( \([[:alpha:]][^[:blank:]]+\)[[:blank:]]*[:=][[:blank:]]*\(.+\)\) : 5, 6=key, 7=value
 ;;    \| \([[:blank:]]+\(.+\)\)                                              : 8, 9=extra-value
 ;; \)$"
 
