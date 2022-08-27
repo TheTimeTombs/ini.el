@@ -165,10 +165,7 @@ Put KEYS in order, each one with one or several VALUES for new KEY."
                   state   'in-key))
            ((eq state 'in-section)
             (if key
-                (error
-                 (format
-                  "FSM: first key/value in section %s already has key %s"
-                  section key))
+                (error "FSM: first key/value in section %s already has key %s" section key)
               (setq key    match
                     values (match-string ini--VALUE)
                     state 'in-key)))
@@ -182,13 +179,9 @@ Put KEYS in order, each one with one or several VALUES for new KEY."
          ((setq match (match-string ini--EXTRA-VALUE))
           (cond
            ((null state)
-            (error
-             (format "Detect value %s without key and outside section"
-                     section)))
+            (error "Detect value %s without key and outside section" section))
            ((eq state 'in-section)
-            (error
-             (format "Detect value %s without key in section %s"
-                     match section)))
+            (error "Detect value %s without key in section %s" match section))
            ((eq state 'in-key)
             (setq values (ini--add-extra-value match values)))))))
       (reverse (ini--add-to-alist alist section keys key values)))))
