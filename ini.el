@@ -208,7 +208,7 @@ Put KEYS in order, each one with one or several VALUES for new KEY."
               (dolist (val (cdr value))
                 (push (format "%s%s" spacer val) lines)))
           (push (format "\n%s = %s" key value) lines))))
-    (format "%s\n" (string-join (reverse lines) "\n"))))
+    (format "%s\n" (string-join (reverse lines)))))
 
 ;; --
 
